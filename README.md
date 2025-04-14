@@ -32,7 +32,7 @@ There are two ways to process these types of documents
 1. Install latest version of java from https://www.oracle.com/java/technologies/downloads/
 2. Run the tika server:
 ```
- java -jar <path_to_nlm_ingestor>/jars/tika-server-standard-nlm-modified-2.4.1_v6.jar
+java -jar <path_to_nlm_ingestor>/jars/tika-server-standard-nlm-modified-2.9.2_v2.jar
 ```
 3. Install the ingestor
 ```
@@ -107,3 +107,17 @@ Some ideas for future work:
 1) Make the changes independent of tika by writing own wrapper over pdfbox
 2) Upgrade to latest version of tika 
 3) Cleanup the format of returned html to make it more css friendly
+
+
+### Pacific Readme
+
+1. run tests
+`make test`
+`make test-pdf-ingestor`
+
+2. build image. This pushes to the Pacific production ECR repo.
+`make build_and_push`
+
+3. After image build, you need to go to the pacific-server repo and deploy the modal app. Make sure you have the Pacific prod aws vars as env vars in your local environment.
+
+If you need to update nlm-utils, go to the nlm-utils repo, update the dependencies, build a whl, and copy under `whl/` in this repo.
