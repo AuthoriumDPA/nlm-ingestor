@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:experimental
-FROM python:3.11-bookworm
+FROM python:3.11-slim-bookworm
 
 # Update and upgrade system packages to get the latest security fixes
 RUN apt-get update && apt-get upgrade -y && \
-  apt-get install -y --no-install-recommends libgomp1 && \
+  apt-get install -y --no-install-recommends libgomp1 wget && \
   rm -rf /var/lib/apt/lists/*
 
 ENV APP_HOME /root
@@ -26,7 +26,7 @@ RUN mkdir -p /usr/share/man/man1 && \
   apt-get install -y openjdk-17-jre-headless
 # install essential packages
 RUN apt-get update && apt-get install -y \
-  libxml2-dev libxslt-dev \
+  libxml2-dev libxslt-dev zlib1g-dev \
   build-essential libmagic-dev && \
   rm -rf /var/lib/apt/lists/*
 
@@ -59,18 +59,11 @@ COPY . ./
 
 
 RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
-<<<<<<< HEAD
-RUN python -m nltk.downloader stopwords
-RUN python -m nltk.downloader punkt
-RUN python -m nltk.downloader punkt_tab
-RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
-=======
-RUN pip install -r requirements.txt
 RUN python -m nltk.downloader -d /usr/share/nltk_data stopwords
 RUN python -m nltk.downloader -d /usr/share/nltk_data punkt
-RUN python -c "import tiktoken; tiktoken.get_encoding(\"cl100k_base\")"
->>>>>>> dd5d01a7fe47b05074487279692ddf8c3b46c9e0
+RUN python -m nltk.downloader -d /usr/share/nltk_data punkt_tab
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 RUN chmod +x run.sh
 
 EXPOSE 5001
-# CMD ./run.sh
+CMD ./run.sh
