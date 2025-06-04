@@ -1,12 +1,16 @@
 # syntax=docker/dockerfile:experimental
 FROM python:3.11-slim-bookworm
 
+# Create a non-root user with numeric UID
+RUN groupadd -r appuser -g 1001 && \
+    useradd -r -g appuser -u 1001 -m -d /home/appuser appuser
+
 # Update and upgrade system packages to get the latest security fixes
 RUN apt-get update && apt-get upgrade -y && \
   apt-get install -y --no-install-recommends libgomp1 wget && \
   rm -rf /var/lib/apt/lists/*
 
-ENV APP_HOME /root
+ENV APP_HOME /home/appuser
 ENV PYTHONPATH="${PYTHONPATH}:${APP_HOME}"
 ENV PYTHONUNBUFFERED=1
 # Update system packages to get latest security fixes
@@ -46,8 +50,8 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y unzip git && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 WORKDIR ${APP_HOME}
-RUN mkdir -p /${APP_HOME}/whl
-COPY whl/*.whl /root/whl/
+RUN mkdir -p ${APP_HOME}/whl && chown -R appuser:appuser ${APP_HOME}
+COPY whl/*.whl ${APP_HOME}/whl/
 COPY pyproject.toml poetry.lock ./
 RUN pip install poetry && \
   poetry config virtualenvs.create false && \
@@ -57,12 +61,24 @@ RUN apt-get update && apt-get install -y libmagic1 && rm -rf /var/lib/apt/lists/
 
 COPY . ./
 
+# Create .ssh directory and set up SSH known_hosts before switching to non-root user
+RUN mkdir -p ${APP_HOME}/.ssh && \
+    chmod 700 ${APP_HOME}/.ssh && \
+    ssh-keyscan github.com >> ${APP_HOME}/.ssh/known_hosts && \
+    chmod 600 ${APP_HOME}/.ssh/known_hosts
 
-RUN mkdir -p -m 0600 ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+# Download NLTK data and tiktoken before switching to non-root user
 RUN python -m nltk.downloader -d /usr/share/nltk_data stopwords
 RUN python -m nltk.downloader -d /usr/share/nltk_data punkt
 RUN python -m nltk.downloader -d /usr/share/nltk_data punkt_tab
 RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+
+# Set proper ownership for all application files
+RUN chown -R appuser:appuser ${APP_HOME}
+
+# Switch to non-root user
+USER appuser
+
 RUN chmod +x run.sh
 
 EXPOSE 5001
