@@ -77,7 +77,7 @@ RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
 RUN chown -R appuser:appuser ${APP_HOME}
 
 # Switch to non-root user
-USER appuser
+USER 1001
 
 RUN chmod +x run.sh
 
