@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:experimental
-FROM python:3.11-slim-bookworm
+FROM python:3.11-slim-trixie
 
 # Create a non-root user with numeric UID
 RUN groupadd -r appuser -g 1001 && \
@@ -23,11 +23,10 @@ RUN apt-get update && \
   postgresql-client && \
   rm -rf /var/lib/apt/lists/*
 
-# install Java
-RUN mkdir -p /usr/share/man/man1 && \
-  apt-get update -y && \
-  apt-get upgrade -y && \
-  apt-get install -y openjdk-17-jre-headless
+# Install Java from Trixie's default repository
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openjdk-21-jre-headless && \
+    rm -rf /var/lib/apt/lists/*
 # install essential packages
 RUN apt-get update && apt-get install -y \
   libxml2-dev libxslt-dev zlib1g-dev \
@@ -53,6 +52,7 @@ WORKDIR ${APP_HOME}
 RUN mkdir -p ${APP_HOME}/whl && chown -R appuser:appuser ${APP_HOME}
 COPY whl/*.whl ${APP_HOME}/whl/
 COPY pyproject.toml poetry.lock ./
+RUN pip install --upgrade pip
 RUN pip install poetry && \
   poetry config virtualenvs.create false && \
   poetry install --no-root
