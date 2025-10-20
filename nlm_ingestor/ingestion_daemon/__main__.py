@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 # CVE-2025-48795 Mitigation: Limit file size to prevent OOM from large stream processing
 # 50MB limit prevents the vulnerable Apache CXF code from exhausting memory
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB in bytes
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB in bytes
 
 # initialize logging
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def parse_document(
         # CVE-2025-48795 Mitigation: File size validation
         # Verify file size even after Flask's MAX_CONTENT_LENGTH check
         file_size = os.path.getsize(tmp_file)
-        max_size = app.config.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024)
+        max_size = app.config.get('MAX_CONTENT_LENGTH', 100 * 1024 * 1024)
         if file_size > max_size:
             logger.warning(
                 f"File {filename} rejected: size {file_size} bytes exceeds "
