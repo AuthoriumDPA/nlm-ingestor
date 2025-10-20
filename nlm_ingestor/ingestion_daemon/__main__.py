@@ -12,6 +12,10 @@ from nlm_ingestor.ingestor import ingestor_api
 
 app = Flask(__name__)
 
+# CVE-2025-48795 Mitigation: Limit file size to prevent OOM from large stream processing
+# 50MB limit prevents the vulnerable Apache CXF code from exhausting memory
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB in bytes
+
 # initialize logging
 logger = logging.getLogger(__name__)
 logger.setLevel(cfg.log_level())
@@ -46,6 +50,26 @@ def parse_document(
         tempfile_handler, tmp_file = tempfile.mkstemp(suffix=file_extension)
         os.close(tempfile_handler)
         file.save(tmp_file)
+
+        # CVE-2025-48795 Mitigation: File size validation
+        # Verify file size even after Flask's MAX_CONTENT_LENGTH check
+        file_size = os.path.getsize(tmp_file)
+        max_size = app.config.get('MAX_CONTENT_LENGTH', 50 * 1024 * 1024)
+        if file_size > max_size:
+            logger.warning(
+                f"File {filename} rejected: size {file_size} bytes exceeds "
+                f"limit {max_size} bytes (CVE-2025-48795 protection)"
+            )
+            os.unlink(tmp_file)
+            return make_response(
+                jsonify({
+                    "status": "fail",
+                    "reason": f"File size ({file_size / 1024 / 1024:.2f}MB) exceeds "
+                             f"maximum allowed ({max_size / 1024 / 1024:.0f}MB)"
+                }),
+                413  # 413 Payload Too Large
+            )
+
         # calculate the file properties
         props = file_utils.extract_file_properties(tmp_file)
         print(f"Parsing document: {filename}")
