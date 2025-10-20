@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Custom Log4j2 Configuration for Tika Server
+
+  PURPOSE: Mitigate CVE-2025-48795 information disclosure risk
+
+  RATIONALE: Apache CXF vulnerability causes large stream-based messages
+  (file attachments) to be logged in plaintext, exposing sensitive data
+  and credentials in logs. This configuration disables all Apache CXF
+  logging while preserving critical Tika error logging.
+
+  IL5 COMPLIANCE: This is a compensating control for CVE-2025-48795
+  until Tika Server can be upgraded to a version with Apache CXF 3.5.11+
+
+  SECURITY CLASSIFICATION: This configuration should be reviewed during
+  security assessments and documented in the System Security Plan (SSP).
+-->
+<Configuration status="WARN">
+  <Appenders>
+    <!-- Console appender for critical errors only -->
+    <Console name="Console" target="SYSTEM_ERR">
+      <PatternLayout pattern="%-5p [%t] %d{yyyy-MM-dd HH:mm:ss,SSS} %c{1.} %m%n"/>
+    </Console>
+
+    <!-- Null appender - discards all log messages sent to it -->
+    <Null name="NullAppender"/>
+  </Appenders>
+
+  <Loggers>
+    <!--
+      CRITICAL SECURITY CONTROL: Disable ALL Apache CXF logging
+      CVE-2025-48795 mitigation - prevents file contents from being logged
+    -->
+    <Logger name="org.apache.cxf" level="OFF" additivity="false">
+      <AppenderRef ref="NullAppender"/>
+    </Logger>
+
+    <!-- Explicitly disable attachment logging (specific vulnerable component) -->
+    <Logger name="org.apache.cxf.attachment" level="OFF" additivity="false">
+      <AppenderRef ref="NullAppender"/>
+    </Logger>
+
+    <!-- Disable JAX-RS logging (REST API layer that uses CXF) -->
+    <Logger name="org.apache.cxf.jaxrs" level="OFF" additivity="false">
+      <AppenderRef ref="NullAppender"/>
+    </Logger>
+
+    <!-- Disable CXF transports (HTTP layer where attachments are processed) -->
+    <Logger name="org.apache.cxf.transport" level="OFF" additivity="false">
+      <AppenderRef ref="NullAppender"/>
+    </Logger>
+
+    <!-- Keep Tika core logging at ERROR level for critical failures -->
+    <Logger name="org.apache.tika" level="ERROR">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <!-- Suppress verbose Tika parser debug output -->
+    <Logger name="org.apache.tika.parser" level="ERROR">
+      <AppenderRef ref="Console"/>
+    </Logger>
+
+    <!-- Root logger - only ERROR level and above -->
+    <Root level="ERROR">
+      <AppenderRef ref="Console"/>
+    </Root>
+  </Loggers>
+</Configuration>
+
